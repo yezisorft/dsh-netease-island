@@ -1,0 +1,15 @@
+# ============================================================================
+# dsh-netease-island —— DSH bundle patch
+# ============================================================================
+# 这是插件的"挂载声明"。DSH 启动时按 bundle 层栈叠加各插件 patch，
+# 本文件会把网易云灵动岛挂件插入 Web profile 的配置树。
+#
+# 安装方式：
+#   dsh plugin --profile web add link:<本目录绝对路径>
+# 或从 npm / tarball：
+#   dsh plugin --profile web add dsh-netease-island
+# ============================================================================
+
+- insert:
+    - id: dsh-netease-island
+      name: dsh-netease-island

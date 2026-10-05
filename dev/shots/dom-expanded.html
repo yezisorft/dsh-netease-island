@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<title>灵动岛 UI 预览</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    /* Stands in for the DSH desktop chrome behind the island. */
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #23303f 0%, transparent 60%),
+      linear-gradient(135deg, #161b22 0%, #0b0f14 100%);
+    font: 13px system-ui, "Microsoft YaHei", sans-serif;
+    color: #6b7683;
+  }
+  .hint { position: fixed; left: 0; right: 0; bottom: 26px; text-align: center; letter-spacing: .3px; }
+  .titlebar { position: fixed; top: 0; left: 0; right: 0; height: 30px;
+              background: rgba(255,255,255,.03); border-bottom: 1px solid rgba(255,255,255,.05); }
+</style>
+</head>
+<body>
+<div class="titlebar"></div>
+<div class="hint">
+  模拟 DSH 桌面背景 —— 灵动岛应出现在顶部居中
+  <span id="mode">（悬停展开态）</span>
+</div>
+
+<!-- the real widget, served by the harness exactly as the plugin serves it -->
+<script src="/dsh-netease/widget.js"></script><div class="root visible has-cover expanded" id="dsh-netease-island-root"></div>
+
+<script>
+  var params = new URLSearchParams(location.search);
+  var wantExpanded = params.get('expanded') === '1';
+  var wantPaused = params.get('paused') === '1';
+
+  if (wantPaused) {
+    // Drive the mock through its own command API so the paused rendering is
+    // produced by the same code path a real click would take.
+    fetch('/dsh-netease/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: 'pause' })
+    }).catch(function () {});
+  }
+
+  document.getElementById('mode').textContent = wantExpanded ? '（悬停展开态）' : '（收起态）';
+
+  if (wantExpanded) {
+    // Dispatch the same event a real hover produces.
+    setTimeout(function () {
+      var host = document.getElementById('dsh-netease-island-root');
+      if (host) host.dispatchEvent(new MouseEvent('mouseenter'));
+    }, 1400);
+  }
+
+  // ?static=1 disables every transition/animation inside the widget. A headless
+  // capture freezes CSS transitions mid-flight - the island was photographed 56px
+  // above the viewport, caught during its slide-in - so the settled state has to
+  // be forced for a screenshot or a geometry reading to mean anything.
+  if (params.get('static') === '1') {
+    var freeze = setInterval(function () {
+      var h = document.getElementById('dsh-netease-island-root');
+      if (!h || !h.shadowRoot) return;
+      if (h.shadowRoot.getElementById('__static')) { clearInterval(freeze); return; }
+      var st = document.createElement('style');
+      st.id = '__static';
+      // The crossfading layers are the ones that matter: a headless capture
+      // freezes a running CSS transition mid-flight, so .compact kept opacity 1
+      // (and the expanded artwork layer was never painted) unless its own
+      // transition is neutralised too.
+      st.textContent = ':host,.island,.glow,.compact,.expanded,.prog,.prog .fill{transition:none !important}' +
+                       '.eq i{animation:none !important}';
+      h.shadowRoot.appendChild(st);
+    }, 100);
+  }
+
+  // ?debug=1 writes a machine-readable geometry report into #dbg so a headless
+  // --dump-dom run can be diffed without eyeballing a screenshot.
+  if (params.get('debug') === '1') {    setTimeout(function () {
+      var out = { viewport: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio } };
+      try {
+        var host = document.getElementById('dsh-netease-island-root');
+        out.host = { classes: host.className, rect: rectOf(host), style: pick(getComputedStyle(host)) };
+        var sr = host.shadowRoot;
+        var island = sr.querySelector('.island');
+        out.island = { classes: island.className, rect: rectOf(island), style: pick(getComputedStyle(island)) };
+        // NB: '.expanded' alone matches the CAPSULE (it carries the state
+        // class), so the layout layer has to be selected as a child of it.
+        [['compact', '.compact'], ['expanded', '.island > .expanded'],
+         ['art', '.art'], ['prog', '.prog']].forEach(function (pair) {
+          var el = sr.querySelector(pair[1]);
+          out[pair[0]] = el ? { rect: rectOf(el), style: pick(getComputedStyle(el)) } : null;
+        });
+        var img = sr.querySelector('.art img');
+        out.artImg = img ? { src: img.getAttribute('src'), complete: img.complete, nw: img.naturalWidth } : null;
+        out.glow = getComputedStyle(sr.querySelector('.glow')).backgroundImage.slice(0, 60);
+        var fill = sr.querySelector('.prog .fill');
+        out.progFillWidth = fill ? fill.style.width : null;
+        out.text = {
+          ctitle: sr.querySelector('.ctitle').textContent,
+          cnote: sr.querySelector('.cnote').textContent,
+          title: sr.querySelector('.title').textContent,
+          artist: sr.querySelector('.artist').textContent,
+          times: sr.querySelector('.times').textContent
+        };
+      } catch (e) { out.error = String(e); }
+      var pre = document.createElement('pre');
+      pre.id = 'dbg';
+      pre.textContent = 'GEOMETRY_JSON=' + JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 3600);
+  }
+
+  function rectOf(el) {
+    var r = el.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+  }
+  function pick(cs) {
+    return {
+      position: cs.position, left: cs.left, top: cs.top, transform: cs.transform,
+      opacity: cs.opacity, display: cs.display, visibility: cs.visibility,
+      width: cs.width, height: cs.height, borderRadius: cs.borderRadius,
+      pointerEvents: cs.pointerEvents, zIndex: cs.zIndex
+    };
+  }
+</script>
+
+
+</body></html>

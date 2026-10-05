@@ -1,0 +1,21 @@
+# 依赖与安装产物
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+
+# 自测产物：Edge / Chromium 的 user-data 目录（几百 MB，且与本机强相关）
+dev/edge-profile/
+dev/edge-headless/
+dev/shots/edge-headless/
+
+# 日志与临时文件
+*.log
+*.tmp
+*tmp.png
+
+# 编辑器和系统垃圾
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

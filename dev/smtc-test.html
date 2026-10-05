@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>SMTC 桥接测试</title>
+<style>
+  body { margin: 0; height: 100vh; display: grid; place-items: center;
+         background: #0d1117; color: #e6edf3;
+         font: 15px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+  .card { text-align: center; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  #status { color: #7ee787; font-variant-numeric: tabular-nums; }
+  .note { color: #8b949e; font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>SMTC 桥接测试</h1>
+  <div id="status">初始化…</div>
+  <div class="note">这段音频是 1 LSB 的抖动噪声，几乎无声。<br>它会向 Windows 注册一个真实的 SMTC 媒体会话。</div>
+</div>
+
+<audio id="audio" loop preload="auto"></audio>
+
+<script>
+  var audio = document.getElementById('audio');
+  var status = document.getElementById('status');
+  var trackIndex = 0;
+
+  var TRACKS = [
+    { title: '起风了（Cover 高橋優）- SMTC 测试', artist: '买辣椒也用券', album: '起风了' },
+    { title: '第二首测试曲目', artist: 'SMTC Bridge', album: 'Dev Harness' },
+    { title: '第三首测试曲目', artist: 'SMTC Bridge', album: 'Dev Harness' }
+  ];
+
+  function setMetadata() {
+    var t = TRACKS[trackIndex % TRACKS.length];
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: t.title,
+        artist: t.artist,
+        album: t.album,
+        artwork: [
+          // Absolute, not '/art.png': Edge's MediaSession bridge drops relative
+          // artwork URLs, which made the whole cover-extraction path untestable.
+          { src: 'http://127.0.0.1:8917/art.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    } catch (err) { /* metadata is best-effort */ }
+  }
+
+  function label() {
+    var t = TRACKS[trackIndex % TRACKS.length];
+    status.textContent = (audio.paused ? '已暂停' : '播放中') + ' · ' + t.title
+      + ' · ' + audio.currentTime.toFixed(1) + 's / ' + (audio.duration || 0).toFixed(1) + 's';
+  }
+
+  audio.addEventListener('timeupdate', label);
+  audio.addEventListener('play', label);
+  audio.addEventListener('pause', label);
+
+  // MediaSession action handlers are what make SMTC's TrySkipNext/TryPlay etc.
+  // report success back to the bridge.
+  if ('mediaSession' in navigator) {
+    var ms = navigator.mediaSession;
+    ms.setActionHandler('play', function () { audio.play(); label(); });
+    ms.setActionHandler('pause', function () { audio.pause(); label(); });
+    ms.setActionHandler('nexttrack', function () { trackIndex++; setMetadata(); label(); });
+    ms.setActionHandler('previoustrack', function () { trackIndex = Math.max(0, trackIndex - 1); setMetadata(); label(); });
+    ms.setActionHandler('seekto', function (d) {
+      if (d && typeof d.seekTime === 'number') audio.currentTime = d.seekTime;
+      label();
+    });
+  }
+
+  audio.src = '/tone.wav';
+  setMetadata();
+
+  audio.play().then(function () {
+    label();
+  }).catch(function (err) {
+    status.textContent = '自动播放被拦截：' + err.message + ' —— 请手动点击播放';
+    // Fallback: expose a click-to-start so the session still registers.
+    document.body.addEventListener('click', function () { audio.play(); label(); }, { once: true });
+  });
+</script>
+</body>
+</html>

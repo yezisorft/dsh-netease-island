@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<title>灵动岛 UI 预览</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    /* Stands in for the DSH desktop chrome behind the island. */
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #23303f 0%, transparent 60%),
+      linear-gradient(135deg, #161b22 0%, #0b0f14 100%);
+    font: 13px system-ui, "Microsoft YaHei", sans-serif;
+    color: #6b7683;
+  }
+  .hint { position: fixed; left: 0; right: 0; bottom: 26px; text-align: center; letter-spacing: .3px; }
+  .titlebar { position: fixed; top: 0; left: 0; right: 0; height: 30px;
+              background: rgba(255,255,255,.03); border-bottom: 1px solid rgba(255,255,255,.05); }
+</style>
+</head>
+<body>
+<div class="titlebar"></div>
+<div class="hint">
+  模拟 DSH 桌面背景 —— 灵动岛应出现在顶部居中
+  <span id="mode">（悬停展开态）</span>
+</div>
+
+<!-- the real widget, served by the harness exactly as the plugin serves it -->
+<script src="/dsh-netease/widget.js"></script><div class="root visible has-cover" id="dsh-netease-island-root"></div>
+
+<script>
+  var params = new URLSearchParams(location.search);
+  var wantExpanded = params.get('expanded') === '1';
+  var wantPaused = params.get('paused') === '1';
+
+  if (wantPaused) {
+    // Drive the mock through its own command API so the paused rendering is
+    // produced by the same code path a real click would take.
+    fetch('/dsh-netease/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: 'pause' })
+    }).catch(function () {});
+  }
+
+  document.getElementById('mode').textContent = wantExpanded ? '（悬停展开态）' : '（收起态）';
+
+  if (wantExpanded) {
+    // Dispatch the same event a real hover produces.
+    setTimeout(function () {
+      var host = document.getElementById('dsh-netease-island-root');
+      if (host) host.dispatchEvent(new MouseEvent('mouseenter'));
+    }, 1400);
+  }
+
+  // ?debug=1 writes a machine-readable geometry report into #dbg so a headless
+  // --dump-dom run can be diffed without eyeballing a screenshot.
+  if (params.get('debug') === '1') {
+    setTimeout(function () {
+      var out = { viewport: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio } };
+      try {
+        var host = document.getElementById('dsh-netease-island-root');
+        out.host = { classes: host.className, rect: rectOf(host), style: pick(getComputedStyle(host)) };
+        var sr = host.shadowRoot;
+        var island = sr.querySelector('.island');
+        out.island = { classes: island.className, rect: rectOf(island), style: pick(getComputedStyle(island)) };
+        ['compact', 'expanded', 'art', 'prog'].forEach(function (sel) {
+          var el = sr.querySelector('.' + sel);
+          out[sel] = el ? { rect: rectOf(el), style: pick(getComputedStyle(el)) } : null;
+        });
+        var img = sr.querySelector('.art img');
+        out.artImg = img ? { src: img.getAttribute('src'), complete: img.complete, nw: img.naturalWidth } : null;
+        out.glow = getComputedStyle(sr.querySelector('.glow')).backgroundImage.slice(0, 60);
+        var fill = sr.querySelector('.prog .fill');
+        out.progFillWidth = fill ? fill.style.width : null;
+        out.text = {
+          ctitle: sr.querySelector('.ctitle').textContent,
+          cnote: sr.querySelector('.cnote').textContent,
+          title: sr.querySelector('.title').textContent,
+          artist: sr.querySelector('.artist').textContent,
+          times: sr.querySelector('.times').textContent
+        };
+      } catch (e) { out.error = String(e); }
+      var pre = document.createElement('pre');
+      pre.id = 'dbg';
+      pre.textContent = 'GEOMETRY_JSON=' + JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 3600);
+  }
+
+  function rectOf(el) {
+    var r = el.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+  }
+  function pick(cs) {
+    return {
+      position: cs.position, left: cs.left, top: cs.top, transform: cs.transform,
+      opacity: cs.opacity, display: cs.display, visibility: cs.visibility,
+      width: cs.width, height: cs.height, borderRadius: cs.borderRadius,
+      pointerEvents: cs.pointerEvents, zIndex: cs.zIndex
+    };
+  }
+</script>
+
+
+<pre id="dbg">GEOMETRY_JSON={"viewport":{"w":876,"h":208,"dpr":1},"host":{"classes":"root visible has-cover","rect":{"x":438,"y":10,"w":0,"h":0},"style":{"position":"fixed","left":"438px","top":"10px","transform":"matrix(1, 0, 0, 1, 0, 0)","opacity":"0","display":"block","visibility":"visible","width":"0px","height":"0px","borderRadius":"0px","pointerEvents":"none","zIndex":"2147483000"}},"island":{"classes":"island expanded","rect":{"x":438,"y":10,"w":404,"h":116},"style":{"position":"absolute","left":"0px","top":"0px","transform":"none","opacity":"1","display":"grid","visibility":"visible","width":"404px","height":"116px","borderRadius":"30px","pointerEvents":"none","zIndex":"1"}},"compact":{"rect":{"x":439,"y":11,"w":402,"h":114},"style":{"position":"absolute","left":"0px","top":"0px","transform":"none","opacity":"1","display":"flex","visibility":"visible","width":"372px","height":"114px","borderRadius":"0px","pointerEvents":"none","zIndex":"auto"}},"expanded":{"rect":{"x":438,"y":10,"w":404,"h":116},"style":{"position":"absolute","left":"0px","top":"0px","transform":"none","opacity":"1","display":"grid","visibility":"visible","width":"404px","height":"116px","borderRadius":"30px","pointerEvents":"none","zIndex":"1"}},"art":{"rect":{"x":457,"y":27,"w":84,"h":84},"style":{"position":"static","left":"auto","top":"auto","transform":"none","opacity":"1","display":"block","visibility":"visible","width":"84px","height":"84px","borderRadius":"13px","pointerEvents":"auto","zIndex":"auto"}},"prog":{"rect":{"x":439,"y":121,"w":402,"h":4},"style":{"position":"absolute","left":"0px","top":"110px","transform":"none","opacity":"1","display":"block","visibility":"visible","width":"402px","height":"4px","borderRadius":"0px","pointerEvents":"auto","zIndex":"2"}},"artImg":{"src":"/dsh-netease/cover.png?v=1","complete":true,"nw":512},"glow":"url(\"http://127.0.0.1:8917/dsh-netease/cover.png?v=1\")","progFillWidth":"100%","text":{"ctitle":"起风了（Cover 高橋優）- 完整版 Live","cnote":"已暂停","title":"起风了（Cover 高橋優）- 完整版 Live","artist":"买辣椒也用券","times":"5:25 / 5:25"}}</pre></body></html>

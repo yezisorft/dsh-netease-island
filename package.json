@@ -1,0 +1,38 @@
+{
+  "name": "dsh-netease-island",
+  "version": "0.1.0",
+  "description": "DSH 灵动岛风格的网易云音乐状态挂件：顶部胶囊显示当前播放（封面/歌名/歌手/进度），支持播放暂停、上一首、下一首与进度跳转。数据取自 Windows SMTC（系统媒体控件），不调用任何网易云私有接口，也不读取账号信息。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "netease",
+    "cloudmusic",
+    "smtc",
+    "dynamic-island",
+    "widget"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "PROVENANCE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yezisorft/dsh-netease-island.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yezisorft/dsh-netease-island/issues"
+  },
+  "homepage": "https://github.com/yezisorft/dsh-netease-island#readme",
+  "author": "yezisorft",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}
